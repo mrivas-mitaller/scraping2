@@ -1,7 +1,7 @@
 {
   "name": "scraper-patentes",
-  "version": "1.0.0",
-  "description": "Microservicio para obtener datos de patentes desde patentechile.com",
+  "version": "1.1.0",
+  "description": "Microservicio con múltiples fuentes de scraping de patentes",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -12,6 +12,7 @@
     "puppeteer": "^22.8.2"
   }
 }
+
 
 
 
