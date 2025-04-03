@@ -10,7 +10,7 @@ module.exports = async function scrapePatenteChile(browser, patente) {
     // Completar la patente en el input
     await page.type("input[name='patente']", patente.toUpperCase());
 
-    // Hacer submit
+    // Hacer submit y esperar navegación
     await Promise.all([
       page.click("button[type='submit']"),
       page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 10000 }),
@@ -37,8 +37,14 @@ module.exports = async function scrapePatenteChile(browser, patente) {
         numero_chasis: getText("Nº Chasis:"),
         rut_propietario: getText("RUT:"),
         nombre_propietario: getText("Nombre:"),
-        fuente: "patentechile.com",
+        fuente: "patentechile.com"
       };
     });
 
-    await
+    await page.close();
+    return data;
+  } catch (error) {
+    console.warn("⚠️ Error en scrapePatenteChile:", error.message);
+    return null;
+  }
+};
