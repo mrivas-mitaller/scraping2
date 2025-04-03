@@ -6,16 +6,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ruta base para confirmar que la API está viva
+// Ruta base para confirmar que la API está activa
 app.get("/", (req, res) => {
   res.send("✅ API funcionando desde Railway");
 });
 
 // Ruta principal de scraping
 app.post("/scrape", async (req, res) => {
-  console.log("📥 Solicitud recibida en /scrape:", req.body);
-
   const { patente } = req.body;
+  console.log("📥 Solicitud recibida en /scrape:", req.body);
 
   if (!patente) {
     return res.status(400).json({ error: "Patente requerida" });
@@ -33,22 +32,25 @@ app.post("/scrape", async (req, res) => {
     const url = `https://www.patentechile.com/patente-${patente.toUpperCase()}`;
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
 
+    // Nuevo método para extraer información de tablas HTML actualizadas
     const data = await page.evaluate(() => {
-      const getText = (label) => {
-        const el = [...document.querySelectorAll("td")].find((td) =>
-          td.textContent.includes(label)
+      const rows = [...document.querySelectorAll(".table tbody tr")];
+
+      const getValue = (label) => {
+        const row = rows.find((tr) =>
+          tr.children[0]?.textContent.trim().toLowerCase().includes(label.toLowerCase())
         );
-        return el ? el.nextElementSibling?.textContent?.trim() : "";
+        return row ? row.children[1]?.textContent.trim() : "";
       };
 
       return {
-        marca: getText("Marca:"),
-        modelo: getText("Modelo:"),
-        tipo: getText("Tipo Vehículo:"),
-        anio: parseInt(getText("Año:")) || null,
-        color: getText("Color:"),
-        motor: getText("Nº Motor:"),
-        chasis: getText("Nº Chasis:"),
+        marca: getValue("marca"),
+        modelo: getValue("modelo"),
+        tipo: getValue("tipo"),
+        anio: parseInt(getValue("año")) || null,
+        color: getValue("color"),
+        motor: getValue("motor"),
+        chasis: getValue("chasis"),
       };
     });
 
@@ -72,7 +74,7 @@ app.post("/scrape", async (req, res) => {
   }
 });
 
-// Puerto dinámico para Railway (usa 8080 por defecto)
+// Railway establece PORT dinámico, por defecto 8080
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`🧪 Scraper activo en http://localhost:${PORT}`)
