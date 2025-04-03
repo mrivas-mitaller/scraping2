@@ -6,12 +6,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ruta base para confirmar que la API está activa
+// Ruta base para verificar que la API está viva
 app.get("/", (req, res) => {
   res.send("✅ API funcionando desde Railway");
 });
 
-// Ruta principal de scraping
+// Ruta de scraping
 app.post("/scrape", async (req, res) => {
   const { patente } = req.body;
   console.log("📥 Solicitud recibida en /scrape:", req.body);
@@ -29,10 +29,18 @@ app.post("/scrape", async (req, res) => {
     });
 
     const page = await browser.newPage();
+
+    // Configurar user-agent para evitar bloqueo
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+    );
+
     const url = `https://www.patentechile.com/patente-${patente.toUpperCase()}`;
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
 
-    // Nuevo método para extraer información de tablas HTML actualizadas
+    // Esperar a que la tabla de datos esté presente
+    await page.waitForSelector(".table tbody tr", { timeout: 10000 });
+
     const data = await page.evaluate(() => {
       const rows = [...document.querySelectorAll(".table tbody tr")];
 
@@ -74,8 +82,9 @@ app.post("/scrape", async (req, res) => {
   }
 });
 
-// Railway establece PORT dinámico, por defecto 8080
+// Puerto dinámico para Railway
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`🧪 Scraper activo en http://localhost:${PORT}`)
 );
+
