@@ -1,1 +1,16 @@
+# Evitar subir dependencias
 node_modules/
+
+# Evitar subir configuraciones del sistema
+.DS_Store
+
+# Evitar cachés
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Puppeteer - evitar Chromium descargado localmente
+.puppeteer/
+
+# Archivos de entorno (si los usás en el futuro)
+.env
