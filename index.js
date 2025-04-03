@@ -11,7 +11,6 @@ app.get("/", (req, res) => {
   res.send("✅ API funcionando desde Railway");
 });
 
-// Ruta principal de scraping
 app.post("/scrape", async (req, res) => {
   const { patente } = req.body;
   console.log("📥 Solicitud recibida en /scrape:", req.body);
@@ -34,12 +33,23 @@ app.post("/scrape", async (req, res) => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
     );
 
-    const url = `https://www.patentechile.com/patente-${patente.toUpperCase()}`;
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+    // 1. Ir al sitio principal
+    await page.goto("https://www.patentechile.com", {
+      waitUntil: "domcontentloaded",
+      timeout: 15000,
+    });
 
-    // Esperar la tabla si existe
-    await page.waitForSelector(".table tbody tr", { timeout: 10000 });
+    // 2. Esperar e ingresar la patente en el input
+    await page.waitForSelector("input[name='patente']", { timeout: 10000 });
+    await page.type("input[name='patente']", patente.toUpperCase());
 
+    // 3. Hacer clic en el botón de búsqueda
+    await page.click("button[type='submit']");
+
+    // 4. Esperar que aparezca la tabla
+    await page.waitForSelector(".table tbody tr", { timeout: 15000 });
+
+    // 5. Extraer los datos
     const data = await page.evaluate(() => {
       const rows = [...document.querySelectorAll(".table tbody tr")];
 
@@ -81,71 +91,7 @@ app.post("/scrape", async (req, res) => {
   }
 });
 
-// Ruta de depuración para inspección visual y HTML
-app.post("/debug", async (req, res) => {
-  const { patente } = req.body;
-  console.log("🛠️ Debug solicitado para:", patente);
-
-  if (!patente) {
-    return res.status(400).json({ error: "Patente requerida para debug" });
-  }
-
-  let browser;
-
-  try {
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
-    const page = await browser.newPage();
-
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
-    );
-
-    const url = `https://www.patentechile.com/patente-${patente.toUpperCase()}`;
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
-
-    // Intentar esperar la tabla (no obligatorio)
-    try {
-      await page.waitForSelector(".table tbody tr", { timeout: 10000 });
-    } catch {
-      console.warn("⚠️ La tabla no apareció en tiempo esperado");
-    }
-
-    // Captura de pantalla
-    await page.screenshot({ path: "debug.png", fullPage: true });
-
-    // HTML completo
-    const html = await page.content();
-
-    // Dump de filas de la tabla
-    const tableDump = await page.evaluate(() => {
-      return [...document.querySelectorAll(".table tbody tr")].map((tr) => ({
-        label: tr.children[0]?.textContent.trim(),
-        value: tr.children[1]?.textContent.trim(),
-      }));
-    });
-
-    await browser.close();
-
-    res.json({
-      url,
-      message: "🧪 Captura y dump completados.",
-      tableDump,
-      htmlSnippet: html.substring(0, 2000) + "..."
-    });
-  } catch (error) {
-    console.error("❌ Error en /debug:", error);
-    if (browser) await browser.close();
-    res.status(500).json({ error: "Error durante el debug", details: error.message });
-  }
-});
-
-// Railway define PORT automáticamente
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`🧪 Scraper activo en http://localhost:${PORT}`)
 );
-
