@@ -4,7 +4,6 @@
   "description": "Microservicio para obtener datos de patentes desde patentechile.com",
   "main": "index.js",
   "scripts": {
-    "postinstall": "puppeteer install",
     "start": "node index.js"
   },
   "dependencies": {
@@ -13,4 +12,6 @@
     "puppeteer": "^21.3.8"
   }
 }
+
+
 
