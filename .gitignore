@@ -7,7 +7,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Output del sistema
+# Sistema
 .DS_Store
 Thumbs.db
 
@@ -17,7 +17,10 @@ chromium/
 
 # Variables de entorno
 .env
-.env.*
+.env.local
+.env.production
+.env.development
+!.env.example
 
 # Archivos temporales
 *.log
@@ -28,11 +31,14 @@ chromium/
 docker-compose.override.yml
 *.local.yml
 
-# Railway build cache
+# Railway / Build cache
 dist/
 build/
 .cache/
 .vercel/
 .output/
 
-
+# Lockfiles (except npm)
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
