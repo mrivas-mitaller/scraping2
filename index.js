@@ -7,21 +7,34 @@ const scrapePatenteChile = require("./scrapers/patentechile");
 const scrapeVolanteOMaleta = require("./scrapers/volanteomaleta");
 const scrapeAutoData = require("./scrapers/autodata");
 
-require("dotenv").config();
+// Cargar .env si está en entorno local
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+// Validación de variables críticas
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL_V2 || !process.env.SUPABASE_SERVICE_ROLE_KEY_V2) {
+  console.error("❌ Faltan variables de entorno necesarias para Supabase");
+  process.exit(1);
+}
 
+// Inicializar cliente Supabase
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL_V2,
   process.env.SUPABASE_SERVICE_ROLE_KEY_V2
 );
 
+// Configuración de Express
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Ruta raíz de prueba
 app.get("/", (req, res) => {
   res.send("🚗 Scraper de patentes activo y conectado a Supabase");
 });
 
+// Endpoint principal
 app.post("/scrape", async (req, res) => {
   const { patente } = req.body;
   if (!patente) return res.status(400).json({ error: "Patente requerida" });
@@ -29,50 +42,59 @@ app.post("/scrape", async (req, res) => {
   const patenteUpper = patente.toUpperCase();
 
   try {
-    // Buscar si ya existe
-    const { data: existing, error: searchError } = await supabase
+    // Verificar si ya existe en Supabase
+    const { data: existing, error: selectError } = await supabase
       .from("vehiculos")
       .select("*")
       .eq("patente", patenteUpper)
       .maybeSingle();
 
-    if (searchError) {
-      console.error("❌ Supabase select error:", searchError.message);
+    if (selectError) {
+      console.error("❌ Error al consultar Supabase:", selectError.message);
       return res.status(500).json({ error: "Error al buscar en Supabase" });
     }
 
     if (existing) {
-      console.log(`✅ Patente ${patenteUpper} ya existe en Supabase`);
+      console.log(`✅ Patente ${patenteUpper} ya registrada`);
       return res.json(existing);
     }
 
-    // No existe, proceder con scraping
+    // Scraping desde múltiples fuentes
     const browser = await launchBrowser();
 
-    let data = await scrapePatenteChile(browser, patenteUpper);
-    if (!data?.marca) data = await scrapeVolanteOMaleta(browser, patenteUpper);
-    if (!data?.marca) data = await scrapeAutoData(browser, patenteUpper);
+    const scrapers = [scrapePatenteChile, scrapeVolanteOMaleta, scrapeAutoData];
+    let scrapedData = null;
 
-    if (!data?.marca) {
-      return res.status(404).json({ error: "No se encontraron datos" });
+    for (const scraper of scrapers) {
+      scrapedData = await scraper(browser, patenteUpper);
+      if (scrapedData?.marca) break;
+    }
+
+    await browser.close();
+
+    if (!scrapedData || !scrapedData.marca) {
+      return res.status(404).json({ error: "No se encontraron datos para esta patente" });
     }
 
     // Insertar en Supabase
-    const { error: insertError } = await supabase.from("vehiculos").insert([data]);
+    const { error: insertError } = await supabase
+      .from("vehiculos")
+      .insert([scrapedData]);
 
     if (insertError) {
-      console.error("❌ Supabase insert error:", insertError.message);
+      console.error("❌ Error al insertar en Supabase:", insertError.message);
       return res.status(500).json({ error: "Error al guardar en Supabase" });
     }
 
-    return res.json(data);
+    return res.json(scrapedData);
   } catch (err) {
     console.error("❌ Error general:", err.message);
-    res.status(500).json({ error: "Error general", message: err.message });
+    return res.status(500).json({ error: "Error en el servidor", message: err.message });
   }
 });
 
+// Arrancar servidor
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`🟢 Servidor activo en http://localhost:${PORT}`);
+  console.log(`🟢 API activa en http://localhost:${PORT}`);
 });
