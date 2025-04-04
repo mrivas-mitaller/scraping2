@@ -1,11 +1,4 @@
-const puppeteer = require("puppeteer");
-
-async function scrapePatenteChile(patente) {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-
+module.exports = async function scrapePatenteChile(browser, patente) {
   let page;
 
   try {
@@ -22,7 +15,7 @@ async function scrapePatenteChile(patente) {
     // Click en buscar
     await page.click("#btnConsultar");
 
-    // Esperar el resultado o un mensaje de error
+    // Esperar el resultado o mensaje de error
     await page.waitForFunction(() => {
       const rows = document.querySelectorAll(".table tbody tr").length;
       const error = document.querySelector(".alert-danger");
@@ -46,6 +39,7 @@ async function scrapePatenteChile(patente) {
         color: getText("Color:"),
         motor: getText("Nº Motor:"),
         chasis: getText("Nº Chasis:"),
+        fuente: "patentechile.com",
       };
     });
 
@@ -58,15 +52,12 @@ async function scrapePatenteChile(patente) {
       ...data,
       patente: patente.toUpperCase(),
       estado: "Activo",
-      fuente: "patentechile.com",
       fecha_registro: new Date().toISOString(),
     };
   } catch (err) {
     console.warn("❌ Error en scrapePatenteChile:", err.message);
-    throw err;
+    return null;
   } finally {
-    if (browser) await browser.close();
+    if (page) await page.close();
   }
-}
-
-module.exports = scrapePatenteChile;
+};
