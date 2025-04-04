@@ -23,3 +23,28 @@
     "@sparticuz/chromium": "^112.0.0"
   }
 }
+{
+  "name": "scraper-patentes",
+  "version": "1.3.0",
+  "description": "Microservicio Node.js para scrapear información de vehículos por patente y almacenarla en Supabase.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "scraper",
+    "puppeteer",
+    "supabase",
+    "vehiculos",
+    "patentes",
+    "chile"
+  ],
+  "author": "TuNombre",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.4",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "puppeteer": "^22.8.2"
+  }
+}
