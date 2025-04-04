@@ -1,10 +1,10 @@
 const express = require("express");
 const cors = require("cors");
-const puppeteer = require("puppeteer");
 
 const scrapePatenteChile = require("./scrapers/patentechile");
 const scrapeVolanteOMaleta = require("./scrapers/volanteomaleta");
 const scrapeAutodata = require("./scrapers/autodata");
+const launchBrowser = require("./lib/browser");
 
 const app = express();
 app.use(cors());
@@ -21,20 +21,19 @@ app.post("/scrape", async (req, res) => {
     return res.status(400).json({ error: "Patente requerida" });
   }
 
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-
+  let browser;
   try {
+    browser = await launchBrowser();
+
     let data = await scrapePatenteChile(browser, patente);
+
     if (!data || !data.marca) {
-      console.log("➡️ Fallback a volanteomaleta");
+      console.log("➡️ Fallback a Volante o Maleta");
       data = await scrapeVolanteOMaleta(browser, patente);
     }
 
     if (!data || !data.marca) {
-      console.log("➡️ Fallback a autodata");
+      console.log("➡️ Fallback a Autodata");
       data = await scrapeAutodata(browser, patente);
     }
 
@@ -42,19 +41,20 @@ app.post("/scrape", async (req, res) => {
       return res.status(404).json({ error: "No se encontraron datos en ninguna fuente" });
     }
 
-    return res.json({
+    res.json({
       ...data,
       patente: patente.toUpperCase(),
       estado: "Activo",
       kilometraje: 0,
       fecha_registro: new Date().toISOString(),
-      fuente: data.fuente,
+      fuente: data.fuente || "desconocida",
     });
+
   } catch (err) {
-    console.error("❌ Error en scraping:", err);
+    console.error("❌ Error en scraping:", err.message);
     res.status(500).json({ error: "Error en scraping", details: err.message });
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
   }
 });
 
