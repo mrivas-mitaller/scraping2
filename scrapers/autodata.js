@@ -1,7 +1,12 @@
 module.exports = async function scrapeAutoData(browser, patente) {
+  let page;
+
   try {
-    const page = await browser.newPage();
-    await page.goto("https://autodata.cl/", { waitUntil: "domcontentloaded", timeout: 15000 });
+    page = await browser.newPage();
+    await page.goto("https://autodata.cl/", {
+      waitUntil: "domcontentloaded",
+      timeout: 15000,
+    });
 
     await page.waitForSelector("input[name='patente']", { timeout: 10000 });
     await page.type("input[name='patente']", patente.toUpperCase());
@@ -18,7 +23,7 @@ module.exports = async function scrapeAutoData(browser, patente) {
             return cells[1].textContent.trim();
           }
         }
-        return "";
+        return null;
       };
 
       return {
@@ -28,15 +33,40 @@ module.exports = async function scrapeAutoData(browser, patente) {
         anio: parseInt(getText("Año")) || null,
         color: getText("Color"),
         numero_motor: getText("Motor"),
-        numero_chasis: getText("Chasis"),
-        fuente: "autodata.cl",
+        vin: getText("Chasis"),
+        nombre_propietario: getText("Propietario"),
       };
     });
 
-    await page.close();
-    return data;
+    return {
+      patente: patente.toUpperCase(),
+      marca: data.marca,
+      modelo: data.modelo,
+      anio: data.anio,
+      version: null,
+      tipo: data.tipo,
+      color: data.color,
+      numero_motor: data.numero_motor,
+      vin: data.vin,
+      transmision: null,
+      tipo_combustible: null,
+      puertas: null,
+      fabricante: data.marca,
+      procedencia: null,
+      kilometraje: 0,
+      estado: "Activo",
+      rut_propietario: null,
+      nombre_propietario: data.nombre_propietario || null,
+      revision_tecnica: null,
+      permiso_circulacion: null,
+      seguro: null,
+      fecha_registro: new Date().toISOString(),
+      fuente: "autodata.cl",
+    };
   } catch (error) {
     console.warn("⚠️ Error en scrapeAutoData:", error.message);
     return null;
+  } finally {
+    if (page) await page.close();
   }
 };
