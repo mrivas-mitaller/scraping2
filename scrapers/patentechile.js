@@ -1,4 +1,6 @@
-module.exports = async function scrapePatenteChile(browser, patente) {
+const puppeteer = require("puppeteer");
+
+async function scrapePatenteChile(browser, patente) {
   let page;
 
   try {
@@ -8,21 +10,16 @@ module.exports = async function scrapePatenteChile(browser, patente) {
       timeout: 20000,
     });
 
-    // Escribir la patente
     await page.waitForSelector("#txtTerm", { timeout: 10000 });
-    await page.type("#txtTerm", patente, { delay: 100 });
-
-    // Click en buscar
+    await page.type("#txtTerm", patente.toUpperCase(), { delay: 100 });
     await page.click("#btnConsultar");
 
-    // Esperar el resultado o mensaje de error
     await page.waitForFunction(() => {
       const rows = document.querySelectorAll(".table tbody tr").length;
       const error = document.querySelector(".alert-danger");
       return rows > 0 || error;
     }, { timeout: 15000 });
 
-    // Extraer datos si existen
     const data = await page.evaluate(() => {
       const getText = (label) => {
         const td = [...document.querySelectorAll("td")].find((el) =>
@@ -37,22 +34,37 @@ module.exports = async function scrapePatenteChile(browser, patente) {
         tipo: getText("Tipo Vehículo:"),
         anio: parseInt(getText("Año:")) || null,
         color: getText("Color:"),
-        motor: getText("Nº Motor:"),
-        chasis: getText("Nº Chasis:"),
-        fuente: "patentechile.com",
+        numero_motor: getText("Nº Motor:"),
+        vin: getText("Nº Chasis:"),
       };
     });
 
-    // Validación
-    if (!data?.marca) {
-      throw new Error("Datos no encontrados o formato inválido.");
-    }
+    if (!data?.marca) throw new Error("Datos no encontrados o formato inválido");
 
     return {
-      ...data,
       patente: patente.toUpperCase(),
+      marca: data.marca,
+      modelo: data.modelo,
+      anio: data.anio,
+      version: null,
+      tipo: data.tipo,
+      color: data.color,
+      numero_motor: data.numero_motor,
+      vin: data.vin,
+      transmision: null,
+      tipo_combustible: null,
+      puertas: null,
+      fabricante: data.marca,
+      procedencia: null,
+      kilometraje: 0,
       estado: "Activo",
+      rut_propietario: null,
+      nombre_propietario: null,
+      revision_tecnica: null,
+      permiso_circulacion: null,
+      seguro: null,
       fecha_registro: new Date().toISOString(),
+      fuente: "patentechile.com",
     };
   } catch (err) {
     console.warn("❌ Error en scrapePatenteChile:", err.message);
@@ -60,4 +72,6 @@ module.exports = async function scrapePatenteChile(browser, patente) {
   } finally {
     if (page) await page.close();
   }
-};
+}
+
+module.exports = scrapePatenteChile;
