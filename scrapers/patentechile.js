@@ -6,30 +6,36 @@ async function scrapePatenteChile(patente) {
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
+  let page;
+
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
     await page.goto("https://www.patentechile.com/", {
       waitUntil: "domcontentloaded",
       timeout: 20000,
     });
 
-    // Esperar el input y escribir la patente
+    // Escribir la patente
     await page.waitForSelector("#txtTerm", { timeout: 10000 });
-    await page.type("#txtTerm", patente);
+    await page.type("#txtTerm", patente, { delay: 100 });
 
-    // Hacer click en el botón
+    // Click en buscar
     await page.click("#btnConsultar");
 
-    // Esperar resultados
-    await page.waitForSelector(".table tbody tr", { timeout: 10000 });
+    // Esperar el resultado o un mensaje de error
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll(".table tbody tr").length;
+      const error = document.querySelector(".alert-danger");
+      return rows > 0 || error;
+    }, { timeout: 15000 });
 
-    // Evaluar datos desde la tabla
+    // Extraer datos si existen
     const data = await page.evaluate(() => {
       const getText = (label) => {
         const td = [...document.querySelectorAll("td")].find((el) =>
           el.textContent.includes(label)
         );
-        return td?.nextElementSibling?.textContent.trim() || "";
+        return td?.nextElementSibling?.textContent.trim() || null;
       };
 
       return {
@@ -43,20 +49,23 @@ async function scrapePatenteChile(patente) {
       };
     });
 
-    await browser.close();
-
-    if (!data.marca) throw new Error("No se encontraron datos");
+    // Validación
+    if (!data?.marca) {
+      throw new Error("Datos no encontrados o formato inválido.");
+    }
 
     return {
       ...data,
       patente: patente.toUpperCase(),
       estado: "Activo",
+      fuente: "patentechile.com",
       fecha_registro: new Date().toISOString(),
     };
-  } catch (error) {
-    await browser.close();
-    console.warn("⚠️ Error en scrapePatenteChile:", error.message);
-    throw error;
+  } catch (err) {
+    console.warn("❌ Error en scrapePatenteChile:", err.message);
+    throw err;
+  } finally {
+    if (browser) await browser.close();
   }
 }
 
