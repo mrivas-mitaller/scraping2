@@ -1,30 +1,35 @@
-module.exports = async function scrapePatenteChile(browser, patente) {
+const puppeteer = require("puppeteer");
+
+async function scrapePatenteChile(patente) {
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
   try {
     const page = await browser.newPage();
-    const url = "https://www.patentechile.com/";
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+    await page.goto("https://www.patentechile.com/", {
+      waitUntil: "domcontentloaded",
+      timeout: 20000,
+    });
 
-    // Esperar que cargue el formulario
-    await page.waitForSelector("input[name='patente']", { timeout: 10000 });
+    // Esperar el input y escribir la patente
+    await page.waitForSelector("#txtTerm", { timeout: 10000 });
+    await page.type("#txtTerm", patente);
 
-    // Completar la patente en el input
-    await page.type("input[name='patente']", patente.toUpperCase());
+    // Hacer click en el botón
+    await page.click("#btnConsultar");
 
-    // Hacer submit y esperar navegación
-    await Promise.all([
-      page.click("button[type='submit']"),
-      page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 10000 }),
-    ]);
+    // Esperar resultados
+    await page.waitForSelector(".table tbody tr", { timeout: 10000 });
 
-    // Esperar que cargue la tabla con los datos
-    await page.waitForSelector("table", { timeout: 10000 });
-
+    // Evaluar datos desde la tabla
     const data = await page.evaluate(() => {
       const getText = (label) => {
-        const el = [...document.querySelectorAll("td")].find((td) =>
-          td.textContent.includes(label)
+        const td = [...document.querySelectorAll("td")].find((el) =>
+          el.textContent.includes(label)
         );
-        return el ? el.nextElementSibling?.textContent?.trim() : "";
+        return td?.nextElementSibling?.textContent.trim() || "";
       };
 
       return {
@@ -33,18 +38,26 @@ module.exports = async function scrapePatenteChile(browser, patente) {
         tipo: getText("Tipo Vehículo:"),
         anio: parseInt(getText("Año:")) || null,
         color: getText("Color:"),
-        numero_motor: getText("Nº Motor:"),
-        numero_chasis: getText("Nº Chasis:"),
-        rut_propietario: getText("RUT:"),
-        nombre_propietario: getText("Nombre:"),
-        fuente: "patentechile.com"
+        motor: getText("Nº Motor:"),
+        chasis: getText("Nº Chasis:"),
       };
     });
 
-    await page.close();
-    return data;
+    await browser.close();
+
+    if (!data.marca) throw new Error("No se encontraron datos");
+
+    return {
+      ...data,
+      patente: patente.toUpperCase(),
+      estado: "Activo",
+      fecha_registro: new Date().toISOString(),
+    };
   } catch (error) {
+    await browser.close();
     console.warn("⚠️ Error en scrapePatenteChile:", error.message);
-    return null;
+    throw error;
   }
-};
+}
+
+module.exports = scrapePatenteChile;
