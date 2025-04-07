@@ -1,6 +1,6 @@
 # 🚗 Scraper Patentes Chile
 
-Este proyecto permite consultar la información de vehículos en Chile utilizando la patente como identificador. Se apoya en distintas fuentes como **Autodata**, **Volante o Maleta** y **PatenteChile**, y guarda los resultados en **Supabase**. Está preparado para ser desplegado en **Railway**.
+Este proyecto permite consultar la información de vehículos en Chile utilizando la patente como identificador. Se apoya en API de Boostr, y guarda los resultados en **Supabase**. Está preparado para ser desplegado en **Railway**.
 
 ---
 
