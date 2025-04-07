@@ -1,41 +1,33 @@
 const axios = require("axios");
 
-module.exports = async function scrapeBoostr(patente) {
+const scrapeBoostr = async (patente) => {
   try {
-    const response = await axios.get(`https://api.boostr.cl/patente/${patente}`, {
+    const url = `https://api.boostr.cl/vehicle/${encodeURIComponent(patente)}.json`;
+
+    const response = await axios.get(url, {
       headers: {
-        Authorization: `Bearer ${process.env.BOOSTR_API_KEY}`,
-        Accept: "application/json",
-      },
+        Authorization: `Bearer ${process.env.BOOSTR_API_KEY}`
+      }
     });
 
     const data = response.data;
 
-    if (!data || data.status !== "success") {
-      console.warn("⚠️ No se obtuvo resultado válido de la API");
-      return null;
-    }
-
+    // Puedes mapear los datos si es necesario, por ejemplo:
     return {
-      patente: patente,
-      marca: data.data.make,
-      modelo: data.data.model,
-      anio: data.data.year,
-      tipo: data.data.type,
-      color: data.data.color,
-      motor: data.data.engine,
-      chasis: data.data.chassis,
-      transmission: data.data.transmission,
-      combustible: data.data.gas_type,
-      version: data.data.version,
-      valuation: data.data.valuation,
-      owner_rut: data.data.owner?.documentNumber || null,
-      owner_nombre: data.data.owner?.fullname || null,
-      source: "boostr_api",
+      patente: patente.toUpperCase(),
+      marca: data.make,
+      modelo: data.model,
+      anio: data.year,
+      tipo: data.type,
+      color: data.color
+      // agrega más campos según el output exacto de Boostr
     };
   } catch (error) {
     console.error("❌ Error al llamar la API de Boostr:", error.message);
     return null;
   }
 };
+
+module.exports = scrapeBoostr;
+
 
