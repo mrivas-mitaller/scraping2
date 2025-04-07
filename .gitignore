@@ -17,9 +17,7 @@ chromium/
 
 # Variables de entorno
 .env
-.env.local
-.env.production
-.env.development
+.env.*
 !.env.example
 
 # Archivos temporales
