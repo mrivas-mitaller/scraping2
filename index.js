@@ -3,9 +3,11 @@ const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
 const launchBrowser = require("./lib/browser");
 
+// Scrapers
 const scrapePatenteChile = require("./scrapers/patentechile");
 const scrapeVolanteOMaleta = require("./scrapers/volanteomaleta");
 const scrapeAutoData = require("./scrapers/autodata");
+const scrapeBoostr = require("./scrapers/boostr");
 
 // Cargar .env si está en entorno local
 if (process.env.NODE_ENV !== "production") {
@@ -15,6 +17,11 @@ if (process.env.NODE_ENV !== "production") {
 // Validación de variables críticas
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL_V2 || !process.env.SUPABASE_SERVICE_ROLE_KEY_V2) {
   console.error("❌ Faltan variables de entorno necesarias para Supabase");
+  process.exit(1);
+}
+
+if (!process.env.BOOSTR_API_KEY) {
+  console.error("❌ Falta BOOSTR_API_KEY en variables de entorno");
   process.exit(1);
 }
 
@@ -60,10 +67,13 @@ app.post("/scrape", async (req, res) => {
     }
 
     // Scraping desde múltiples fuentes
-    const browser = await launchBrowser();
-
-    const scrapers = [scrapePatenteChile, scrapeVolanteOMaleta, scrapeAutoData];
     let scrapedData = null;
+
+    // Boostr no requiere navegador
+    const scrapers = [scrapeBoostr, scrapePatenteChile, scrapeVolanteOMaleta, scrapeAutoData];
+
+    // Inicia navegador solo si algún scraper lo necesita
+    const browser = await launchBrowser();
 
     for (const scraper of scrapers) {
       scrapedData = await scraper(browser, patenteUpper);
