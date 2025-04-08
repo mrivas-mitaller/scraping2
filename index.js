@@ -1,44 +1,40 @@
 const express = require("express");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
-const launchBrowser = require("./lib/browser");
-const scrapeBoostr = require("./scrapers/boostr");
+const dotenv = require("dotenv");
+const fetchVehicleData = require("./scrapers/boostr");
 
-// Cargar .env si no está en producción
+// Cargar variables de entorno si no está en producción
 if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
+  dotenv.config();
 }
 
-// Validar variables críticas
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL_V2 || !process.env.SUPABASE_SERVICE_ROLE_KEY_V2) {
-  console.error("❌ Faltan variables de entorno necesarias para Supabase");
+// Validación de variables críticas
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL_V2 || !process.env.SUPABASE_SERVICE_ROLE_KEY_V2 || !process.env.BOOSTR_API_KEY) {
+  console.error("❌ Faltan variables de entorno necesarias");
   process.exit(1);
 }
 
-if (!process.env.BOOSTR_API_KEY) {
-  console.error("❌ Falta la variable BOOSTR_API_KEY");
-  process.exit(1);
-}
-
-// Inicializar cliente Supabase
+// Inicializar Supabase
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL_V2,
   process.env.SUPABASE_SERVICE_ROLE_KEY_V2
 );
 
-// Inicializar Express
+// Configuración del servidor
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ruta de prueba
+// Ruta básica de prueba
 app.get("/", (req, res) => {
-  res.send("🚗 API de patentes activa y conectada a Supabase + Boostr");
+  res.send("🚀 Microservicio Boostr activo.");
 });
 
-// Endpoint /scrape
+// Endpoint principal
 app.post("/scrape", async (req, res) => {
   const { patente } = req.body;
+
   if (!patente) return res.status(400).json({ error: "Patente requerida" });
 
   const patenteUpper = patente.toUpperCase();
@@ -57,31 +53,31 @@ app.post("/scrape", async (req, res) => {
     }
 
     if (existing) {
-      console.log(`✅ Patente ${patenteUpper} ya registrada`);
+      console.log(`ℹ️ Patente ${patenteUpper} ya registrada`);
       return res.json(existing);
     }
 
-    // Scraping desde Boostr
-    const scrapedData = await scrapeBoostr(patenteUpper);
+    // Consultar API de Boostr
+    const data = await fetchVehicleData(patenteUpper);
 
-    if (!scrapedData || !scrapedData.marca) {
+    if (!data) {
       return res.status(404).json({ error: "No se encontraron datos para esta patente" });
     }
 
     // Insertar en Supabase
     const { error: insertError } = await supabase
       .from("vehiculos")
-      .insert([scrapedData]);
+      .insert([data]);
 
     if (insertError) {
       console.error("❌ Error al insertar en Supabase:", insertError.message);
       return res.status(500).json({ error: "Error al guardar en Supabase" });
     }
 
-    return res.json(scrapedData);
+    return res.json(data);
   } catch (err) {
     console.error("❌ Error general:", err.message);
-    return res.status(500).json({ error: "Error en el servidor", message: err.message });
+    return res.status(500).json({ error: "Error interno", message: err.message });
   }
 });
 
