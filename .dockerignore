@@ -1,36 +1,38 @@
-# Dependencias locales
+# Node modules (se instalan dentro del contenedor)
 node_modules/
-.pnpm/
-.yarn/
 
-# Logs
+# Logs y archivos temporales
 *.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
+*.tmp
+*.swp
+
+# Variables de entorno (deben manejarse con Railway secrets)
+.env
+.env.local
+.env.development
+.env.production
 
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
 
-# Archivos de entorno (Railway ya gestiona esto)
-.env
-.env.local
-.env.production
-.env.development
+# Puppeteer / Chromium (si existieran)
+.puppeteer/
+chromium/
 
-# Builds y caché
+# Cachés y carpetas de builds
 dist/
 build/
 .cache/
 .output/
+.vercel/
 
-# Puppeteer / Chromium (si alguna vez vuelves a usarlos)
-.puppeteer/
-chromium/
-
-# Otros
-*.tmp
-*.swp
+# Docker
 docker-compose.override.yml
 *.local.yml
+
+# Lockfiles opcionales si usas solo npm
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
