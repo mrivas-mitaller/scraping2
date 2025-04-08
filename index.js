@@ -4,65 +4,97 @@ const { createClient } = require("@supabase/supabase-js");
 const dotenv = require("dotenv");
 const fetchVehicleData = require("./scrapers/boostr");
 
-// Cargar variables de entorno si no está en producción
+// 🌱 Cargar variables de entorno en desarrollo
 if (process.env.NODE_ENV !== "production") {
   dotenv.config();
 }
 
-// Validación de variables críticas
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL_V2 || !process.env.SUPABASE_SERVICE_ROLE_KEY_V2 || !process.env.BOOSTR_API_KEY) {
-  console.error("❌ Faltan variables de entorno necesarias");
+// 🧪 Validación de variables críticas
+const REQUIRED_VARS = [
+  "NEXT_PUBLIC_SUPABASE_URL_V2",
+  "SUPABASE_SERVICE_ROLE_KEY_V2",
+  "BOOSTR_API_KEY"
+];
+
+const missingVars = REQUIRED_VARS.filter((key) => !process.env[key]);
+if (missingVars.length > 0) {
+  console.error("❌ Faltan variables de entorno necesarias:", missingVars.join(", "));
   process.exit(1);
 }
 
-// Inicializar Supabase
+// 🛠️ Inicializar Supabase
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL_V2,
   process.env.SUPABASE_SERVICE_ROLE_KEY_V2
 );
 
-// Configuración del servidor
+// 🚀 Crear servidor Express
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ruta básica de prueba
+// 🌐 Ruta de verificación
 app.get("/", (req, res) => {
-  res.send("🚀 Microservicio Boostr activo.");
+  res.send("✅ API de consulta de patentes activa y operativa.");
 });
 
-// Endpoint principal
+// 🔍 Endpoint principal
 app.post("/scrape", async (req, res) => {
-  const { patente } = req.body;
-
-  if (!patente) return res.status(400).json({ error: "Patente requerida" });
-
-  const patenteUpper = patente.toUpperCase();
-
   try {
-    // Verificar si ya existe en Supabase
-    const { data: existing, error: selectError } = await supabase
+    const { patente } = req.body;
+
+    if (!patente || typeof patente !== "string") {
+      return res.status(400).json({ error: "Debe proporcionar una patente válida" });
+    }
+
+    const patenteUpper = patente.toUpperCase();
+
+    // Verificar si ya existe en la base de datos
+    const { data: existing, error: fetchError } = await supabase
       .from("vehiculos")
       .select("*")
       .eq("patente", patenteUpper)
       .maybeSingle();
 
-    if (selectError) {
-      console.error("❌ Error al consultar Supabase:", selectError.message);
-      return res.status(500).json({ error: "Error al buscar en Supabase" });
+    if (fetchError) {
+      console.error("❌ Error al consultar Supabase:", fetchError.message);
+      return res.status(500).json({ error: "Error al consultar base de datos" });
     }
 
     if (existing) {
-      console.log(`ℹ️ Patente ${patenteUpper} ya registrada`);
-      return res.json(existing);
+      console.log(`ℹ️ Vehículo con patente ${patenteUpper} ya registrado.`);
+      return res.status(200).json(existing);
     }
 
-    // Consultar API de Boostr
+    // Llamar API externa (Boostr)
     const data = await fetchVehicleData(patenteUpper);
 
-    if (!data) {
-      return res.status(404).json({ error: "No se encontraron datos para esta patente" });
+    if (!data || !data.patente) {
+      return res.status(404).json({ error: "No se encontraron datos para la patente proporcionada" });
     }
+
+    // Guardar en Supabase
+    const { error: insertError } = await supabase
+      .from("vehiculos")
+      .insert([data]);
+
+    if (insertError) {
+      console.error("❌ Error al insertar en Supabase:", insertError.message);
+      return res.status(500).json({ error: "No se pudo guardar el vehículo" });
+    }
+
+    return res.status(201).json(data);
+  } catch (error) {
+    console.error("❌ Error general:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor", message: error.message });
+  }
+});
+
+// 🟢 Iniciar el servidor
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`🟢 API activa y escuchando en http://localhost:${PORT}`);
+});
 
     // Insertar en Supabase
     const { error: insertError } = await supabase
