@@ -1,31 +1,15 @@
-const axios = require("axios");
+const apisChile = require('@api/apis-chile');
 
 const scrapeBoostr = async (browser, patente) => {
-  const apiKey = process.env.BOOSTR_API_KEY;
-  if (!apiKey) {
-    console.error("❌ BOOSTR_API_KEY no está definida en el entorno");
-    return null;
-  }
-
-  const url = `https://api.boostr.cl/vehicle/${patente}.json`;
-
   try {
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json"
-      }
-    });
+    apisChile.auth(process.env.BOOSTR_API_KEY);
 
-    const data = response.data.data;
+    const response = await apisChile.carPlate({ plate: patente });
 
-    if (!data || !data.make) {
-      console.warn("⚠️ No se encontraron datos válidos para la patente:", patente);
-      return null;
-    }
+    const data = response.data;
 
     return {
-      patente: data.plate || patente,
+      patente: data.plate,
       marca: data.make,
       modelo: data.model,
       version: data.version,
@@ -37,11 +21,11 @@ const scrapeBoostr = async (browser, patente) => {
       color: data.color,
       puertas: data.doors,
       transmision: data.transmission,
-      kilometraje: data.kilometers,
+      kilometros: data.kilometers,
       combustible: data.gas_type,
       fabricante: data.manufacturer,
-      region: data.region,
-      pais_origen: data.country
+      origen_region: data.region,
+      origen_pais: data.country
     };
   } catch (error) {
     console.error("❌ Error al llamar la API de Boostr:", error.message);
