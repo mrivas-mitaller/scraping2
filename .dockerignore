@@ -1,0 +1,36 @@
+# Dependencias locales
+node_modules/
+.pnpm/
+.yarn/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de entorno (Railway ya gestiona esto)
+.env
+.env.local
+.env.production
+.env.development
+
+# Builds y caché
+dist/
+build/
+.cache/
+.output/
+
+# Puppeteer / Chromium (si alguna vez vuelves a usarlos)
+.puppeteer/
+chromium/
+
+# Otros
+*.tmp
+*.swp
+docker-compose.override.yml
+*.local.yml
