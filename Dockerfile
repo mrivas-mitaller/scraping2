@@ -6,8 +6,8 @@ WORKDIR /app
 # Copiamos solo archivos de dependencias para cacheo eficiente
 COPY package*.json ./
 
-# Instalamos solo dependencias necesarias para producción
-RUN npm ci --omit=dev
+# ✅ Usamos npm install en lugar de npm ci para evitar errores de sincronización
+RUN npm install --omit=dev
 
 # 🐳 Etapa 2: Imagen final, más limpia y segura
 FROM node:20-alpine
