@@ -11,8 +11,8 @@ if (process.env.NODE_ENV !== "production") {
 
 // 🧪 Validación de variables críticas
 const REQUIRED_VARS = [
-  "NEXT_PUBLIC_SUPABASE_URL_V2",
-  "SUPABASE_SERVICE_ROLE_KEY_V2",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "BOOSTR_API_KEY"
 ];
 
@@ -24,8 +24,8 @@ if (missingVars.length > 0) {
 
 // 🛠️ Inicializar Supabase
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL_V2,
-  process.env.SUPABASE_SERVICE_ROLE_KEY_V2
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
 // 🚀 Crear servidor Express
