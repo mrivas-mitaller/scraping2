@@ -49,11 +49,11 @@ app.post("/scrape", async (req, res) => {
 
     const patenteUpper = patente.toUpperCase();
 
-    // Verificar si ya existe en la base de datos
+    // Verificar si ya existe en Supabase
     const { data: existing, error: fetchError } = await supabase
-      .from("vehiculos")
+      .from("vehicles")
       .select("*")
-      .eq("patente", patenteUpper)
+      .eq("plate", patenteUpper)
       .maybeSingle();
 
     if (fetchError) {
@@ -69,13 +69,13 @@ app.post("/scrape", async (req, res) => {
     // Llamar API externa (Boostr)
     const data = await fetchVehicleData(patenteUpper);
 
-    if (!data || !data.patente) {
+    if (!data || !data.plate) {
       return res.status(404).json({ error: "No se encontraron datos para la patente proporcionada" });
     }
 
     // Guardar en Supabase
     const { error: insertError } = await supabase
-      .from("vehiculos")
+      .from("vehicles")
       .insert([data]);
 
     if (insertError) {
@@ -94,27 +94,4 @@ app.post("/scrape", async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🟢 API activa y escuchando en http://localhost:${PORT}`);
-});
-
-    // Insertar en Supabase
-    const { error: insertError } = await supabase
-      .from("vehiculos")
-      .insert([data]);
-
-    if (insertError) {
-      console.error("❌ Error al insertar en Supabase:", insertError.message);
-      return res.status(500).json({ error: "Error al guardar en Supabase" });
-    }
-
-    return res.json(data);
-  } catch (err) {
-    console.error("❌ Error general:", err.message);
-    return res.status(500).json({ error: "Error interno", message: err.message });
-  }
-});
-
-// Iniciar servidor
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`🟢 API activa en http://localhost:${PORT}`);
 });
