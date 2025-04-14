@@ -1,34 +1,31 @@
-# 🐳 Etapa 1: Construcción de dependencias
+# Etapa 1: Construcción de dependencias
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copiamos solo archivos de dependencias para cacheo eficiente
+# Instalar solo dependencias necesarias para producción
 COPY package*.json ./
-
-# ✅ Usamos npm install en lugar de npm ci para evitar errores de sincronización
 RUN npm install --omit=dev
 
-# 🐳 Etapa 2: Imagen final, más limpia y segura
+# Etapa 2: Imagen final más liviana y segura
 FROM node:20-alpine
 
-# Crear un usuario no-root por seguridad
+# Crear un usuario no root por seguridad
 RUN addgroup app && adduser -S -G app app
 
-# Directorio de trabajo
 WORKDIR /app
 
-# Copiamos desde el builder solo lo necesario
+# Copiar código fuente y node_modules
 COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 
-# Variables de entorno (Railway puede sobreescribirlas)
+# Variables de entorno
 ENV NODE_ENV=production
 
-# Puerto expuesto por Express
+# Exponer puerto del servidor Express
 EXPOSE 8080
 
-# Usar el usuario seguro creado
+# Usar usuario seguro
 USER app
 
 # Comando de arranque
