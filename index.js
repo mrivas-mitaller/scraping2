@@ -1,3 +1,5 @@
+// index.js
+
 const express = require("express");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
@@ -53,7 +55,7 @@ app.post("/scrape", async (req, res) => {
     const { data: existing, error: fetchError } = await supabase
       .from("vehicles")
       .select("*")
-      .eq("plate", patenteUpper)
+      .eq("license_plate", patenteUpper)
       .maybeSingle();
 
     if (fetchError) {
@@ -69,21 +71,36 @@ app.post("/scrape", async (req, res) => {
     // Llamar API externa (Boostr)
     const data = await fetchVehicleData(patenteUpper);
 
-    if (!data || !data.plate) {
+    if (!data || !data.patente) {
       return res.status(404).json({ error: "No se encontraron datos para la patente proporcionada" });
     }
+
+    // Convertir datos al formato que espera Supabase
+    const transformedData = {
+      license_plate: data.patente,
+      brand: data.marca,
+      model: data.modelo,
+      year: data.anio,
+      engine: data.motor,
+      transmission: data.transmision,
+      fuel_type: data.combustible,
+      color: data.color,
+      doors: data.puertas,
+      vin: data.chasis || "",
+      mileage: data.kilometros || 0
+    };
 
     // Guardar en Supabase
     const { error: insertError } = await supabase
       .from("vehicles")
-      .insert([data]);
+      .insert([transformedData]);
 
     if (insertError) {
       console.error("❌ Error al insertar en Supabase:", insertError.message);
       return res.status(500).json({ error: "No se pudo guardar el vehículo" });
     }
 
-    return res.status(201).json(data);
+    return res.status(201).json(transformedData);
   } catch (error) {
     console.error("❌ Error general:", error.message);
     return res.status(500).json({ error: "Error interno del servidor", message: error.message });
